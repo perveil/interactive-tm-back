@@ -1,3 +1,7 @@
+import sys
+import os
+project_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(project_path)
 import pandas as pd
 import numpy as np
 import argparse
@@ -106,10 +110,14 @@ def process(args):
         docuemnt_author_df = pd.DataFrame(data=document_author_relation, columns=["document_id", "author_id"])
         docuemnt_author_df.to_csv(f"{args.output_path}document_author.csv", index=False)
     ### word 实体建立
-    word2idx = cv.vocabulary_
-    idx2word = dict([(idx, word) for word, idx in cv.vocabulary_.items()])
-
-    word_entity = pd.DataFrame(data=idx2word.items(), columns=["word_id", "word_key"])
+    vocab = cv.get_feature_names()
+    freq = tf.sum(axis=0).getA1()
+    word2idx = dict([(word, idx) for idx, word in enumerate(vocab)])
+    idx2word = dict([(idx, word) for idx, word in enumerate(vocab)])
+    # word2idx = cv.vocabulary_
+    # idx2word = dict([(idx, word) for word, idx in cv.vocabulary_.items()])
+    # word_entity = pd.DataFrame(data=idx2word.items(), columns=["word_id", "word_key"])
+    word_entity = pd.DataFrame(data={"word_id": range(len(vocab)), "word_key": vocab, "word_frequency": freq})
     word_entity.to_csv(f"{args.output_path}word.csv", index=False)
     #### document 与word 的共现关系
     document_word_occurrence = tf.toarray()
@@ -187,7 +195,7 @@ if __name__ == '__main__':
     parser.add_argument('--input_path', type=str, default="./dataset/covid-2022-11-input/")
     parser.add_argument('--input_file', type=str, default="data.xlsx")
     parser.add_argument('--lang', type=str, default="en")
-    parser.add_argument('--output_path', type=str, default="./dataset/covid-2022-11-output/")
+    parser.add_argument('--output_path', type=str, default="./dataset/covid-2022-11-output-new/")
     #### load config
     args = parser.parse_args()
     word_dict, author_dict, journal_dict = process(args)
