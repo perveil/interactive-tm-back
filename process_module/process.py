@@ -33,7 +33,7 @@ def process(args):
         document_columns.append("date")
     document_entity = data[document_columns]
     document_entity["document_id"] = range(len(document_entity))
-    document_entity.to_csv(f"{args.output_path}document.csv", index=False)
+    document_entity.to_excel(f"{args.output_path}document.xlsx", index=False)
 
     ### clean the document
     if args.lang == "en":
@@ -99,7 +99,7 @@ def process(args):
         #### document map 作者
         document_author_relation = []
         for document_idx, authors in enumerate(data["authors"].values):
-            for author in authors.split(","):
+            for author in authors.split(";"):
                 if author.strip() in author2idx.keys():
                     document_author_relation.append(
                         {
@@ -141,7 +141,7 @@ def process(args):
         authors_journal_relation = []
         for document_idx, authors_journal_pair in enumerate(data[["authors", "journal"]].values):
             authors, journal = authors_journal_pair
-            authors = [author.strip() for author in authors.split(",")]
+            authors = [author.strip() for author in authors.split(";")]
             for author in authors:
                 if author in author2idx.keys():
                     authors_journal_relation.append(
@@ -195,7 +195,7 @@ if __name__ == '__main__':
     parser.add_argument('--input_path', type=str, default="./dataset/covid-2022-11-input/")
     parser.add_argument('--input_file', type=str, default="data.xlsx")
     parser.add_argument('--lang', type=str, default="en")
-    parser.add_argument('--output_path', type=str, default="./dataset/covid-2022-11-output-new/")
+    parser.add_argument('--output_path', type=str, default="./dataset/covid-2022-11-output/")
     #### load config
     args = parser.parse_args()
     word_dict, author_dict, journal_dict = process(args)
