@@ -1,4 +1,6 @@
 pymysql
 schedule
 cryptography
-scikit_learn:1.2.1
+ETMscikit_learn
+sqlalchemy
+
