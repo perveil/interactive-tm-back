@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
 import numpy as np
-from models.ETM.VAE_model import VAE
+from models.VAE_model import VAE
 
 
 class EVAE(VAE):

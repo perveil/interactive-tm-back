@@ -55,10 +55,10 @@ def softmax(x):
     return f_x
 
 
+#### 构建主题实体
 def _jensen_shannon(_P, _Q):
     _M = 0.5 * (_P + _Q)
     return 0.5 * (entropy(_P, _M) + entropy(_Q, _M))
-
 def _pcoa(pair_dists, n_components=2):
     """Principal Coordinate Analysis,
     aka Classical Multidimensional Scaling
@@ -103,7 +103,6 @@ def js_PCoA(distributions):
     """
     dist_matrix = squareform(pdist(distributions, metric=_jensen_shannon))
     return _pcoa(dist_matrix)
-
 def _topic_coordinates(mds, topic_term_dists, topic_proportion, start_index=1):
     K = topic_term_dists.shape[0]
     mds_res = mds(topic_term_dists)
@@ -116,6 +115,7 @@ def _topic_coordinates(mds, topic_term_dists, topic_proportion, start_index=1):
                           )
     # note: cluster (should?) be deprecated soon. See: https://github.com/cpsievert/LDAvis/issues/26
     return mds_df
+
 def _df_with_names(data, index_name, columns_name):
     if type(data) == pd.DataFrame:
         # we want our index to be numbered
@@ -125,8 +125,6 @@ def _df_with_names(data, index_name, columns_name):
     df.index.name = index_name
     df.columns.name = columns_name
     return df
-
-
 def _series_with_name(data, name):
     if type(data) == pd.Series:
         data.name = name

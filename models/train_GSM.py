@@ -7,17 +7,16 @@ from sklearn.feature_extraction.text import CountVectorizer
 import pickle
 import warnings
 warnings.filterwarnings("ignore")
-from models.ETM.ETM_model import ETM
+from models.GSM.GSM_model import GSM
 from models.utils.fn import DocDataset
 import torch
 from models.utils.fn import _get_vocab, _get_doc_lengths, _get_term_freqs, _row_norm, _build_entity
 
 
-def run_etm(args):
+def run_gsm(args):
     """
        n_components : topic_num
        max_iter: max iteration for model training
-       embed_dim: dimension of topic vector
        batch_size: batch size for training
        lr: learning rate
        use_gpu: use gpu to train or not
@@ -32,27 +31,26 @@ def run_etm(args):
     term_freqs = _get_term_freqs(bow)
 
     doc_dataset = DocDataset(vocab, bow, doc_lengths, term_freqs)
-    print(f"ETM training begins.\n"
+    print(f"GSM training begins.\n"
           f"Topic num: {args.n_components}. Total iters: {args.max_iter}\n"
           f"Vocab size: {len(vocab)}, Doc size: {len(doc_lengths)}")
-    model = ETM(
-        vocab=vocab,
-        bow_dim=len(vocab),
-        n_topic=args.n_components,
-        task_name=args.data_name,
-        device="cuda:0" if torch.cuda.is_available() and args.use_gpu else "cpu",
-        emb_dim=args.embed_dim
+    model = GSM(
+        bow_dim = len(vocab),
+        n_topic = args.n_components,
+        task_name = args.data_name,
+        device = "cuda:0" if torch.cuda.is_available() and args.use_gpu else "cpu",
     )
     ckpt = None if args.ckpt == "" else torch.load(args.ckpt)
     model.train(
-        train_data=doc_dataset,
-        test_data=doc_dataset,
-        batch_size=args.batch_size,
-        learning_rate=args.lr,
-        num_epochs=args.max_iter,
-        log_every=args.log_every,
-        beta=1.0,
-        ckpt=ckpt,
+        train_data = doc_dataset,
+        vocab = vocab,
+        test_data = doc_dataset,
+        batch_size = args.batch_size,
+        learning_rate = args.lr,
+        num_epochs = args.max_iter,
+        log_every = args.log_every,
+        beta = 1.0,
+        ckpt = ckpt,
     )
     topic_word_dist = model.get_topic_word_dist()
     topic_word_dist = _row_norm(topic_word_dist)
@@ -80,7 +78,7 @@ if __name__ == '__main__':
     parser.add_argument('--log_every', type=int, default=20)
     #### load config
     args = parser.parse_args()
-    topic_word_dis, doc_topic_dis, vocab, doc_lengths, term_freqs = run_etm(args)
+    topic_word_dis, doc_topic_dis, vocab, doc_lengths, term_freqs = run_gsm(args)
     print("ETM training End")
     _build_entity(args, topic_word_dis, doc_topic_dis, vocab, doc_lengths, term_freqs)
     print("ETM End")

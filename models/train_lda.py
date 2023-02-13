@@ -8,7 +8,7 @@ import pickle
 import warnings
 
 warnings.filterwarnings("ignore")
-from models.model_utils import _get_vocab, _get_doc_lengths, _get_term_freqs, _row_norm, _build_entity
+from models.utils.fn import _get_vocab, _get_doc_lengths, _get_term_freqs, _row_norm, _build_entity
 
 
 def run_lda(args):
