@@ -19,9 +19,12 @@ def _get_term_freqs(dtm):
 
 
 def _get_vocab(vectorizer):
-    return vectorizer.get_feature_names()
-
+    return vectorizer.get_feature_names_out()
+    
 def _build_entity(args, topic_word_dis, doc_topic_dis, vocab, doc_lengths, term_freqs):
+    ### create output file destination
+    if not os.path.exists(args.output_path):
+        os.makedirs(args.output_path)
     #### build topic entity
     topic_entity = create_topic_entity(topic_word_dis, doc_topic_dis, vocab, doc_lengths, term_freqs, start_index=0)
     topic_entity.to_csv(f"{args.output_path}topic.csv", index=False)

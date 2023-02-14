@@ -21,6 +21,9 @@ def process(args):
         lang: language
         output_path: output path
     """
+    ### create output file destination
+    if not os.path.exists(args.output_path):
+        os.makedirs(args.output_path)
     ### load data
     data = pd.read_excel(args.input_path + args.input_file)
     ## save the document
@@ -33,7 +36,7 @@ def process(args):
         document_columns.append("date")
     document_entity = data[document_columns]
     document_entity["document_id"] = range(len(document_entity))
-    document_entity.to_excel(f"{args.output_path}document.xlsx", index=False)
+    document_entity.to_csv(f"{args.output_path}document.csv", index=False)
 
     ### clean the document
     if args.lang == "en":
@@ -110,7 +113,7 @@ def process(args):
         docuemnt_author_df = pd.DataFrame(data=document_author_relation, columns=["document_id", "author_id"])
         docuemnt_author_df.to_csv(f"{args.output_path}document_author.csv", index=False)
     ### word 实体建立
-    vocab = cv.get_feature_names()
+    vocab = cv.get_feature_names_out()
     freq = tf.sum(axis=0).getA1()
     word2idx = dict([(word, idx) for idx, word in enumerate(vocab)])
     idx2word = dict([(idx, word) for idx, word in enumerate(vocab)])
@@ -190,12 +193,12 @@ if __name__ == '__main__':
     # parser.add_argument('--input_file', type=str, required=True)
     # parser.add_argument('--lang', type=str, required=True)
     # parser.add_argu∏ment('--output_path', type=str,required=True)
-    parser.add_argument('--data_name', type=str, default="covid-2022-11")
+    parser.add_argument('--data_name', type=str, default="test")
     parser.add_argument('--vocabulary_size', type=int, default=2 ** 12)
-    parser.add_argument('--input_path', type=str, default="./dataset/covid-2022-11-input/")
+    parser.add_argument('--input_path', type=str, default="./dataset/test-500/")
     parser.add_argument('--input_file', type=str, default="data.xlsx")
     parser.add_argument('--lang', type=str, default="en")
-    parser.add_argument('--output_path', type=str, default="./dataset/covid-2022-11-output/")
+    parser.add_argument('--output_path', type=str, default="./output/test-500-gsm/")
     #### load config
     args = parser.parse_args()
     word_dict, author_dict, journal_dict = process(args)

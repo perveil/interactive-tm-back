@@ -7,13 +7,13 @@ import torch.nn.functional as F
 from torch.utils.data import Dataset,DataLoader
 import numpy as np
 from tqdm import tqdm
-from models.VAE_model import VAE
+from models.utils.VAE_model import VAE
 import matplotlib.pyplot as plt
 import sys
 import codecs
 import time
 sys.path.append('..')
-from model_utils import evaluate_topic_quality, smooth_curve
+from models.utils.fn import evaluate_topic_quality, smooth_curve
 
 class GSM:
     def __init__(self,bow_dim=10000,n_topic=20,taskname=None,device=None):
@@ -30,7 +30,7 @@ class GSM:
     def train(self,train_data,vocab,batch_size=256,learning_rate=1e-3,test_data=None,num_epochs=100,is_evaluate=False,log_every=5,beta=1.0,criterion='cross_entropy',ckpt=None):
         self.vae.train()
         self.id2token = dict([(idx, word) for idx, word in enumerate(vocab)])
-        data_loader = DataLoader(train_data,batch_size=batch_size,shuffle=True,num_workers=4,collate_fn=train_data.collate_fn)
+        data_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True, num_workers=4)
 
         optimizer = torch.optim.Adam(self.vae.parameters(),lr=learning_rate)
         #scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.5)
@@ -43,26 +43,14 @@ class GSM:
             start_epoch = 0
 
         trainloss_lst, valloss_lst = [], []
-        recloss_lst, klloss_lst = [],[]
         c_v_lst, c_w2v_lst, c_uci_lst, c_npmi_lst, mimno_tc_lst, td_lst = [], [], [], [], [], []
         for epoch in range(start_epoch, num_epochs):
             epochloss_lst = []
             for iter,data in enumerate(data_loader):
                 optimizer.zero_grad()
 
-                txts,bows = data
+                bows = data
                 bows = bows.to(self.device)
-                '''
-                n_samples = 20
-                rec_loss = torch.tensor(0.0).to(self.device)
-                for i in range(n_samples):
-                    bows_recon,mus,log_vars = self.vae(bows,lambda x:torch.softmax(x,dim=1))
-                    
-                    logsoftmax = torch.log_softmax(bows_recon,dim=1)
-                    _rec_loss = -1.0 * torch.sum(bows*logsoftmax)
-                    rec_loss += _rec_loss
-                rec_loss = rec_loss / n_samples
-                '''
                 bows_recon,mus,log_vars = self.vae(bows,lambda x:torch.softmax(x,dim=1))
                 if criterion=='cross_entropy':
                     logsoftmax = torch.log_softmax(bows_recon,dim=1)
@@ -81,11 +69,11 @@ class GSM:
 
                 trainloss_lst.append(loss.item()/len(bows))
                 epochloss_lst.append(loss.item()/len(bows))
-                if (iter+1) % 10==0:
+                if (iter+1) % 2 == 0:
                     print(f'Epoch {(epoch+1):>3d}\tIter {(iter+1):>4d}\tLoss:{loss.item()/len(bows):<.7f}\tRec Loss:{rec_loss.item()/len(bows):<.7f}\tKL Div:{kl_div.item()/len(bows):<.7f}')
             #scheduler.step()
             if (epoch+1) % log_every==0:
-                save_name = f'./ckpt/GSM_{self.taskname}_tp{self.n_topic}_{time.strftime("%Y-%m-%d-%H-%M", time.localtime())}_ep{epoch+1}.ckpt'
+                save_name = f'./ckpt/ETM_{self.taskname}_tp{self.n_topic}_{time.strftime("%Y-%m-%d-%H-%M", time.localtime())}_ep{epoch + 1}.ckpt'
                 checkpoint = {
                     "net": self.vae.state_dict(),
                     "optimizer": optimizer.state_dict(),
@@ -101,31 +89,21 @@ class GSM:
                 print(f'Epoch {(epoch+1):>3d}\tLoss:{sum(epochloss_lst)/len(epochloss_lst):<.7f}')
                 print('\n'.join([str(lst) for lst in self.show_topic_words()]))
                 print('='*30)
-                smth_pts = smooth_curve(trainloss_lst)
-                plt.plot(np.array(range(len(smth_pts)))*log_every,smth_pts)
-                plt.xlabel('epochs')
-                plt.title('Train Loss')
-                plt.savefig('gsm_trainloss.png')
-                if test_data!=None:
-                    c_v,c_w2v,c_uci,c_npmi,mimno_tc, td = self.evaluate(test_data,calc4each=False)
-                    c_v_lst.append(c_v), c_w2v_lst.append(c_w2v), c_uci_lst.append(c_uci),c_npmi_lst.append(c_npmi), mimno_tc_lst.append(mimno_tc), td_lst.append(td)
-        scrs = {'c_v':c_v_lst,'c_w2v':c_w2v_lst,'c_uci':c_uci_lst,'c_npmi':c_npmi_lst,'mimno_tc':mimno_tc_lst,'td':td_lst}
-        '''
-        for scr_name,scr_lst in scrs.items():
-            plt.cla()
-            plt.plot(np.array(range(len(scr_lst)))*log_every,scr_lst)
-            plt.savefig(f'wlda_{scr_name}.png')
-        '''
-        plt.cla()
-        for scr_name,scr_lst in scrs.items():
-            if scr_name in ['c_v','c_w2v','td']:
-                plt.plot(np.array(range(len(scr_lst)))*log_every,scr_lst,label=scr_name)
-        plt.title('Topic Coherence')
-        plt.xlabel('epochs')
-        plt.legend()
-        plt.savefig(f'gsm_tc_scores.png')
-        # The code lines between this and the last comment lines are duplicated with WLDA.py, consider to simpify them.
-
+        checkpoint = {
+            "net": self.vae.state_dict(),
+            "optimizer": optimizer.state_dict(),
+            "epoch": -1,
+            "param": {
+                "model_name":"gsm",
+                "bow_dim": self.bow_dim,
+                "n_topic": self.n_topic,
+                "task_name": self.taskname,
+                "device": self.device,
+            }
+        }
+        save_name = f'./ckpt/ETM_{self.taskname}_tp{self.n_topic}_{time.strftime("%Y-%m-%d-%H-%M", time.localtime())}.ckpt'
+        torch.save(checkpoint, save_name)
+        print(f"Train end. Model is saved to {save_name}")
 
     def evaluate(self,test_data,calc4each=False):
         topic_words = self.show_topic_words()

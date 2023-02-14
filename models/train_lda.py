@@ -1,3 +1,8 @@
+import sys
+import os
+project_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(project_path)
+
 import os
 import json
 import argparse
@@ -62,9 +67,9 @@ if __name__ == '__main__':
     # parser.add_argument('--priori_topic_doc_dis', type=str)
     # parser.add_argument('--n_components', type=int,default=5)
     # parser.add_argument('--max_iter', type=int,default=100)
-    parser.add_argument('--data_name', type=str, default="covid-2022-11")
-    parser.add_argument('--input_path', type=str, default="./dataset/covid-2022-11-output/")
-    parser.add_argument('--output_path', type=str, default="./dataset/covid-2022-11-output/")
+    parser.add_argument('--data_name', type=str, default="test-500")
+    parser.add_argument('--input_path', type=str, default="./output/test-500/")
+    parser.add_argument('--output_path', type=str, default="./output/test-500/") ### 输出路径需要指定model
     parser.add_argument('--priori_topic_word_dis', type=str)
     parser.add_argument('--priori_topic_doc_dis', type=str)
     parser.add_argument('--n_components', type=int, default=5)

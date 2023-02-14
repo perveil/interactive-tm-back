@@ -2,6 +2,7 @@ import sys
 import os
 project_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(project_path)
+
 import argparse
 from sklearn.feature_extraction.text import CountVectorizer
 import pickle
@@ -37,7 +38,7 @@ def run_gsm(args):
     model = GSM(
         bow_dim = len(vocab),
         n_topic = args.n_components,
-        task_name = args.data_name,
+        taskname = args.data_name,
         device = "cuda:0" if torch.cuda.is_available() and args.use_gpu else "cpu",
     )
     ckpt = None if args.ckpt == "" else torch.load(args.ckpt)
@@ -65,11 +66,10 @@ def run_gsm(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Topic Model ETM')
-    parser.add_argument('--data_name', type=str, default="covid-2022-11")
-    parser.add_argument('--input_path', type=str, default="./dataset/covid-2022-11-output/")
-    parser.add_argument('--output_path', type=str, default="./dataset/covid-2022-11-output/")
+    parser.add_argument('--data_name', type=str, default="test-500")
+    parser.add_argument('--input_path', type=str, default="./output/test-500-gsm/")
+    parser.add_argument('--output_path', type=str, default="./output/test-500-gsm/")
     parser.add_argument('--n_components', type=int, default=5)
-    parser.add_argument('--embed_dim', type=int, default=300)
     parser.add_argument('--batch_size', type=int, default=64)
     parser.add_argument('--max_iter', type=int, default=50)
     parser.add_argument('--lr', type=float, default=1e-4)

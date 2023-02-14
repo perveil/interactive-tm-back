@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
 import numpy as np
-from models.VAE_model import VAE
+from models.utils.VAE_model import VAE
 
 
 class EVAE(VAE):
@@ -93,6 +93,7 @@ class ETM:
                     "optimizer": optimizer.state_dict(),
                     "epoch": epoch,
                     "param": {
+                        "model_name":"etm",
                         "bow_dim": self.bow_dim,
                         "n_topic": self.n_topic,
                         "task_name": self.task_name,
