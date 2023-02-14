@@ -5,6 +5,7 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader
 import numpy as np
 from models.utils.VAE_model import VAE
+from models.utils.fn import evaluate_topic_quality
 
 
 class EVAE(VAE):
@@ -105,7 +106,7 @@ class ETM:
                 print(f'Epoch {(epoch + 1):>3d}\tLoss:{sum(epochloss_lst) / len(epochloss_lst):<.7f}')
                 print(f'Top 10 words for each topic:')
                 print('\n'.join([str(lst) for lst in self.show_topic_words(top_k=10)]))
-        # model.evaluate(test_data=test_data)
+                self.evaluate(test_data=test_data)
         checkpoint = {
             "net": self.vae.state_dict(),
             "optimizer": optimizer.state_dict(),
@@ -123,9 +124,8 @@ class ETM:
         print(f"Train end. Model is saved to {save_name}")
 
     def evaluate(self, test_data, calc4each=False):
-        pass
-        # topic_words = self.show_topic_words()
-        # return evaluate_topic_quality(topic_words, test_data, taskname=self.task_name, calc4each=calc4each)
+        topic_words = self.show_topic_words()
+        return evaluate_topic_quality(topic_words, test_data, taskname=self.task_name, calc4each=calc4each)
 
     def get_topic_word_dist(self):
         self.vae.eval()

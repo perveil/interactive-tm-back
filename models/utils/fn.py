@@ -1,5 +1,7 @@
 import numpy as np
 import pandas as pd
+from gensim.corpora import Dictionary
+
 from utils import create_topic_entity
 from sklearn.metrics.pairwise import cosine_similarity
 
@@ -129,60 +131,76 @@ def get_topic_words(model,topn=15,n_topic=10,vocab=None,fix_topic=None,showWght=
         topics.append(show_one_tp(fix_topic))
     return topics
 
+
 def calc_topic_diversity(topic_words):
-    '''topic_words is in the form of [[w11,w12,...],[w21,w22,...]]'''
-    vocab = set(sum(topic_words,[]))
+    """
+        topic_words: topic words in the form of [[w11,w12,...],[w21,w22,...]]
+    """
+    vocab = set(sum(topic_words, []))
     n_total = len(topic_words) * len(topic_words[0])
     topic_div = len(vocab) / n_total
     return topic_div
 
+
 def calc_topic_coherence(topic_words,docs,dictionary,emb_path=None,taskname=None,sents4emb=None,calc4each=False):
-    # emb_path: path of the pretrained word2vec weights, in text format.
-    # sents4emb: list/generator of tokenized sentences.
+    """
+        topic_words: topic words in the form of [[w11,w12,...],[w21,w22,...]]
+        docs: documents in the form of [[w11,w12,...],[w21,w22,...]], i.e. list of list of str, tokenized texts
+        dictionary: Gensim dictionary mapping of id word
+        emb_path: path of the pretrained word2vec weights in text format, used in calculating c_w2v score
+        sents4emb: list/generator of tokenized sentences, used to train embeddings in calculating c_w2v score
+        calc4each: whether to calculate each topic's coherence
+    """
     # Computing the C_V score
-    cv_coherence_model = CoherenceModel(topics=topic_words,texts=docs,dictionary=dictionary,coherence='c_v')
+    cv_coherence_model = CoherenceModel(topics=topic_words, texts=docs, dictionary=dictionary, coherence='c_v',
+                                        processes=2)
     cv_per_topic = cv_coherence_model.get_coherence_per_topic() if calc4each else None
     cv_score = cv_coherence_model.get_coherence()
     
     # Computing the C_W2V score
     try:
-        w2v_model_path = os.path.join(os.getcwd(),'data',f'{taskname}','w2v_weight_kv.txt')
+        w2v_model_path = f'./models/ETM/ckpt/{taskname}_w2v_weight.kv'
         # Priority order: 1) user's embed file; 2) standard path embed file; 3) train from scratch then store.
-        if emb_path!=None and os.path.exists(emb_path):
-            keyed_vectors = gensim.models.KeyedVectors.load_word2vec_format(emb_path,binary=False)
+        if emb_path is not None and os.path.exists(emb_path):
+            keyed_vectors = gensim.models.KeyedVectors.load_word2vec_format(emb_path, binary=False)
         elif os.path.exists(w2v_model_path):
-            keyed_vectors = gensim.models.KeyedVectors.load_word2vec_format(w2v_model_path,binary=False)
-        elif sents4emb!=None:
+            keyed_vectors = gensim.models.KeyedVectors.load(w2v_model_path)
+        elif sents4emb is not None:
             print('Training a word2vec model 20 epochs to evaluate topic coherence, this may take a few minutes ...')
-            w2v_model = gensim.models.Word2Vec(sents4emb,size=300,min_count=1,workers=6,iter=20)
+            w2v_model = gensim.models.Word2Vec(sents4emb, min_count=1, workers=6)
             keyed_vectors = w2v_model.wv
-            keyed_vectors.save_word2vec_format(w2v_model_path,binary=False)
+            keyed_vectors.save(w2v_model_path)
         else:
             raise Exception("C_w2v score isn't available for the missing of training corpus (sents4emb=None).")
-            
-        w2v_coherence_model = CoherenceModel(topics=topic_words,texts=docs,dictionary=dictionary,coherence='c_w2v',keyed_vectors=keyed_vectors)
 
+        w2v_coherence_model = CoherenceModel(topics=topic_words, texts=docs, dictionary=dictionary, coherence='c_w2v',
+                                             keyed_vectors=keyed_vectors, processes=2)
         w2v_per_topic = w2v_coherence_model.get_coherence_per_topic() if calc4each else None
         w2v_score = w2v_coherence_model.get_coherence()
     except Exception as e:
         print(e)
-        #In case of OOV Error
         w2v_per_topic = [None for _ in range(len(topic_words))]
         w2v_score = None
-    
+
     # Computing the C_UCI score
-    c_uci_coherence_model = CoherenceModel(topics=topic_words,texts=docs,dictionary=dictionary,coherence='c_uci')
+    c_uci_coherence_model = CoherenceModel(topics=topic_words, texts=docs, dictionary=dictionary, coherence='c_uci',
+                                           processes=2)
     c_uci_per_topic = c_uci_coherence_model.get_coherence_per_topic() if calc4each else None
     c_uci_score = c_uci_coherence_model.get_coherence()
-    
-    
+
     # Computing the C_NPMI score
-    c_npmi_coherence_model = CoherenceModel(topics=topic_words,texts=docs,dictionary=dictionary,coherence='c_npmi')
+    c_npmi_coherence_model = CoherenceModel(topics=topic_words, texts=docs, dictionary=dictionary, coherence='c_npmi',
+                                            processes=2)
     c_npmi_per_topic = c_npmi_coherence_model.get_coherence_per_topic() if calc4each else None
     c_npmi_score = c_npmi_coherence_model.get_coherence()
-    return (cv_score,w2v_score,c_uci_score, c_npmi_score),(cv_per_topic,w2v_per_topic,c_uci_per_topic,c_npmi_per_topic)
 
-def mimno_topic_coherence(topic_words,docs):
+    # Computing the C_Mimno score
+    c_mimno_score = mimno_topic_coherence(topic_words, docs)
+    return (cv_score, w2v_score, c_uci_score, c_npmi_score, c_mimno_score), \
+           (cv_per_topic, w2v_per_topic, c_uci_per_topic, c_npmi_per_topic)
+
+
+def mimno_topic_coherence(topic_words, docs):
     tword_set = set([w for wlst in topic_words for w in wlst])
     word2docs = {w:set([]) for w in tword_set}
     for docid,doc in enumerate(docs):
@@ -199,32 +217,39 @@ def mimno_topic_coherence(topic_words,docs):
             for j in range(0,i):
                 s += np.log((co_occur(wlst[i],wlst[j])+1.0)/len(word2docs[wlst[j]]))
         scores.append(s)
-    return np.mean(s)
+    return np.mean(scores)
+
 
 def evaluate_topic_quality(topic_words, test_data, taskname=None, calc4each=False):
-    
-    td_score = calc_topic_diversity(topic_words)
-    print(f'topic diversity:{td_score}')
-    
-    (c_v, c_w2v, c_uci, c_npmi),\
+    """
+        topic_words: topic words in the form of [[w11,w12,...],[w21,w22,...]]
+        test_data: documents in the form of [[w11,w12,...],[w21,w22,...]], i.e. list of list of str, tokenized texts
+        calc4each: whether to calculate each topic's coherence
+    """
+    # calculate topic diversity
+    topic_diversity = calc_topic_diversity(topic_words)
+    print(f'topic diversity:{topic_diversity}')
+    # calculate topic coherence
+    dictionary = Dictionary(test_data)
+    (c_v, c_w2v, c_uci, c_npmi, c_mimno),\
         (cv_per_topic, c_w2v_per_topic, c_uci_per_topic, c_npmi_per_topic) = \
-        calc_topic_coherence(topic_words=topic_words, docs=test_data.docs, dictionary=test_data.dictionary,
+        calc_topic_coherence(topic_words=topic_words, docs=test_data, dictionary=dictionary,
                              emb_path=None, taskname=taskname, sents4emb=test_data, calc4each=calc4each)
     print('c_v:{}, c_w2v:{}, c_uci:{}, c_npmi:{}'.format(
         c_v, c_w2v, c_uci, c_npmi))
-    scrs = {'c_v':cv_per_topic,'c_w2v':c_w2v_per_topic,'c_uci':c_uci_per_topic,'c_npmi':c_npmi_per_topic}
+    scrs = {'c_v': cv_per_topic, 'c_w2v': c_w2v_per_topic, 'c_uci': c_uci_per_topic, 'c_npmi': c_npmi_per_topic}
     if calc4each:
-        for scr_name,scr_per_topic in scrs.items():
+        for scr_name, scr_per_topic in scrs.items():
             print(f'{scr_name}:')
             for t_idx, (score, twords) in enumerate(zip(scr_per_topic, topic_words)):
-                print(f'topic.{t_idx+1:>03d}: {score} {twords}')
-    
-    mimno_tc = mimno_topic_coherence(topic_words, test_data.docs)
-    print('mimno topic coherence:{}'.format(mimno_tc))
+                print(f'topic.{t_idx + 1:>03d}: {score} {twords}')
+
+    print('mimno topic coherence:{}'.format(c_mimno))
     if calc4each:
-        return (c_v, c_w2v, c_uci, c_npmi, mimno_tc, td_score), (cv_per_topic, c_w2v_per_topic, c_uci_per_topic, c_npmi_per_topic)
+        return (c_v, c_w2v, c_uci, c_npmi, c_mimno, topic_diversity), (cv_per_topic, c_w2v_per_topic, c_uci_per_topic, c_npmi_per_topic)
     else:
-        return c_v, c_w2v, c_uci, c_npmi, mimno_tc, td_score
+        return c_v, c_w2v, c_uci, c_npmi, c_mimno, topic_diversity
+
 
 def smooth_curve(points, factor=0.9):
     smoothed_points = []

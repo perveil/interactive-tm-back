@@ -2,6 +2,7 @@ import sys
 import os
 project_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(project_path)
+os.chdir(project_path)
 import argparse
 from sklearn.feature_extraction.text import CountVectorizer
 import pickle
@@ -10,6 +11,7 @@ warnings.filterwarnings("ignore")
 from models.ETM.ETM_model import ETM
 from models.utils.fn import DocDataset
 import torch
+import pandas as pd
 from models.utils.fn import _get_vocab, _get_doc_lengths, _get_term_freqs, _row_norm, _build_entity
 
 
@@ -26,6 +28,13 @@ def run_etm(args):
     """
     cv = CountVectorizer(vocabulary=pickle.load(open(f"{args.input_path}/cv.pkl", 'rb')))
     bow = pickle.load(open(f"{args.input_path}/bow.pkl", 'rb'))
+    if os.path.exists(f"{args.input_path}/document.csv"):
+        test_df = pd.read_csv(f"{args.input_path}/document.csv")
+        test_data = []
+        for doc in test_df.text.values:
+            test_data.append(doc.split(' '))
+    else:
+        test_data = None
 
     vocab = _get_vocab(cv)
     doc_lengths = _get_doc_lengths(bow)
@@ -35,6 +44,8 @@ def run_etm(args):
     print(f"ETM training begins.\n"
           f"Topic num: {args.n_components}. Total iters: {args.max_iter}\n"
           f"Vocab size: {len(vocab)}, Doc size: {len(doc_lengths)}")
+    if test_data is not None:
+        print(f"Test doc size: {len(test_data)}")
     model = ETM(
         vocab=vocab,
         bow_dim=len(vocab),
@@ -46,7 +57,7 @@ def run_etm(args):
     ckpt = None if args.ckpt == "" else torch.load(args.ckpt)
     model.train(
         train_data=doc_dataset,
-        test_data=doc_dataset,
+        test_data=test_data,
         batch_size=args.batch_size,
         learning_rate=args.lr,
         num_epochs=args.max_iter,
@@ -77,7 +88,7 @@ if __name__ == '__main__':
     parser.add_argument('--lr', type=float, default=1e-4)
     parser.add_argument('--use_gpu', type=bool, default=False)
     parser.add_argument('--ckpt', type=str, default="")
-    parser.add_argument('--log_every', type=int, default=20)
+    parser.add_argument('--log_every', type=int, default=2)
     #### load config
     args = parser.parse_args()
     topic_word_dis, doc_topic_dis, vocab, doc_lengths, term_freqs = run_etm(args)
