@@ -11,7 +11,8 @@ warnings.filterwarnings("ignore")
 from models.GSM.GSM_model import GSM
 from models.utils.fn import DocDataset
 import torch
-from models.utils.fn import _get_vocab, _get_doc_lengths, _get_term_freqs, _row_norm, _build_entity
+from models.utils.fn import _get_vocab, _get_doc_lengths, _get_term_freqs, _row_norm, _build_entity,set_random_seed
+import pandas as pd
 
 
 def run_gsm(args):
@@ -26,6 +27,14 @@ def run_gsm(args):
     """
     cv = CountVectorizer(vocabulary=pickle.load(open(f"{args.input_path}/cv.pkl", 'rb')))
     bow = pickle.load(open(f"{args.input_path}/bow.pkl", 'rb'))
+
+    if os.path.exists(f"{args.input_path}/document.csv"):
+        test_df = pd.read_csv(f"{args.input_path}/document.csv")
+        test_data = []
+        for doc in test_df.text.values:
+            test_data.append(doc.split(' '))
+    else:
+        test_data = None
 
     vocab = _get_vocab(cv)
     doc_lengths = _get_doc_lengths(bow)
@@ -45,7 +54,7 @@ def run_gsm(args):
     model.train(
         train_data = doc_dataset,
         vocab = vocab,
-        test_data = doc_dataset,
+        test_data = test_data,
         batch_size = args.batch_size,
         learning_rate = args.lr,
         num_epochs = args.max_iter,
@@ -65,10 +74,12 @@ def run_gsm(args):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Topic Model ETM')
-    parser.add_argument('--data_name', type=str, default="test-500")
+    parser = argparse.ArgumentParser(description='Topic Model GSM')
+    parser.add_argument('--data_name', type=str, default="test-100")
     parser.add_argument('--input_path', type=str, default="./output/test-500-gsm/")
     parser.add_argument('--output_path', type=str, default="./output/test-500-gsm/")
+    # parser.add_argument('--input_path', type=str, default="./dataset/test-100/")
+    # parser.add_argument('--output_path', type=str, default="./dataset/test-100/")
     parser.add_argument('--n_components', type=int, default=5)
     parser.add_argument('--batch_size', type=int, default=64)
     parser.add_argument('--max_iter', type=int, default=50)
@@ -78,7 +89,11 @@ if __name__ == '__main__':
     parser.add_argument('--log_every', type=int, default=20)
     #### load config
     args = parser.parse_args()
+    ### set a constant radom seed
+    set_random_seed()
+    ##### start Training 
     topic_word_dis, doc_topic_dis, vocab, doc_lengths, term_freqs = run_gsm(args)
-    print("ETM training End")
-    _build_entity(args, topic_word_dis, doc_topic_dis, vocab, doc_lengths, term_freqs)
-    print("ETM End")
+    print("GSM training End")
+    ###### 
+    #### _build_entity(args, topic_word_dis, doc_topic_dis, vocab, doc_lengths, term_freqs)
+    print("GSM End")

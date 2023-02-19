@@ -27,10 +27,10 @@ class GSM:
         if device!=None:
             self.vae = self.vae.to(device)
 
-    def train(self,train_data,vocab,batch_size=256,learning_rate=1e-3,test_data=None,num_epochs=100,is_evaluate=False,log_every=5,beta=1.0,criterion='cross_entropy',ckpt=None):
+    def train(self,train_data,vocab,batch_size=256,learning_rate=1e-3,test_data=None,num_epochs=10,is_evaluate=False,log_every=5,beta=1.0,criterion='cross_entropy',ckpt=None):
         self.vae.train()
         self.id2token = dict([(idx, word) for idx, word in enumerate(vocab)])
-        data_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True, num_workers=4)
+        data_loader = DataLoader(train_data, batch_size = batch_size, shuffle=False, num_workers=4)
 
         optimizer = torch.optim.Adam(self.vae.parameters(),lr=learning_rate)
         #scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.5)
@@ -72,38 +72,14 @@ class GSM:
                 if (iter+1) % 2 == 0:
                     print(f'Epoch {(epoch+1):>3d}\tIter {(iter+1):>4d}\tLoss:{loss.item()/len(bows):<.7f}\tRec Loss:{rec_loss.item()/len(bows):<.7f}\tKL Div:{kl_div.item()/len(bows):<.7f}')
             #scheduler.step()
-            if (epoch+1) % log_every==0:
-                save_name = f'./ckpt/ETM_{self.taskname}_tp{self.n_topic}_{time.strftime("%Y-%m-%d-%H-%M", time.localtime())}_ep{epoch + 1}.ckpt'
-                checkpoint = {
-                    "net": self.vae.state_dict(),
-                    "optimizer": optimizer.state_dict(),
-                    "epoch": epoch,
-                    "param": {
-                        "bow_dim": self.bow_dim,
-                        "n_topic": self.n_topic,
-                        "taskname": self.taskname
-                    }
-                }
-                torch.save(checkpoint,save_name)
-                # The code lines between this and the next comment lines are duplicated with WLDA.py, consider to simpify them.
+            if (epoch+1) % 2 == 0:
                 print(f'Epoch {(epoch+1):>3d}\tLoss:{sum(epochloss_lst)/len(epochloss_lst):<.7f}')
                 print('\n'.join([str(lst) for lst in self.show_topic_words()]))
                 print('='*30)
-        checkpoint = {
-            "net": self.vae.state_dict(),
-            "optimizer": optimizer.state_dict(),
-            "epoch": -1,
-            "param": {
-                "model_name":"gsm",
-                "bow_dim": self.bow_dim,
-                "n_topic": self.n_topic,
-                "task_name": self.taskname,
-                "device": self.device,
-            }
-        }
-        save_name = f'./ckpt/ETM_{self.taskname}_tp{self.n_topic}_{time.strftime("%Y-%m-%d-%H-%M", time.localtime())}.ckpt'
-        torch.save(checkpoint, save_name)
-        print(f"Train end. Model is saved to {save_name}")
+                self.evaluate(test_data=test_data)
+        print(f"Train end. Model is not saved")
+            
+            
 
     def evaluate(self,test_data,calc4each=False):
         topic_words = self.show_topic_words()
@@ -167,7 +143,7 @@ class GSM:
                 word_dist = F.softmax(word_dist,dim=1)
             return word_dist.detach().cpu().numpy()
 
-    def show_topic_words(self,topic_id=None,topK=15, dictionary=None):
+    def show_topic_words(self,topic_id=None,topK=5, dictionary=None):
         topic_words = []
         idxes = torch.eye(self.n_topic).to(self.device)
         word_dist = self.vae.decode(idxes)

@@ -9,6 +9,7 @@ from scipy.stats import entropy
 from scipy.spatial.distance import pdist, squareform
 
 
+
 #### load english stop word
 EN_STOP_WORDS = []
 with open('./process_module/process_helper/en_stopwords.txt',encoding='utf-8') as file:

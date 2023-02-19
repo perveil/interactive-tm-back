@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 from gensim.corpora import Dictionary
-
+import random
 from utils import create_topic_entity
 from sklearn.metrics.pairwise import cosine_similarity
 
@@ -195,8 +195,8 @@ def calc_topic_coherence(topic_words,docs,dictionary,emb_path=None,taskname=None
     c_npmi_score = c_npmi_coherence_model.get_coherence()
 
     # Computing the C_Mimno score
-    c_mimno_score = mimno_topic_coherence(topic_words, docs)
-    return (cv_score, w2v_score, c_uci_score, c_npmi_score, c_mimno_score), \
+    # c_mimno_score = mimno_topic_coherence(topic_words, docs)
+    return (cv_score, w2v_score, c_uci_score, c_npmi_score), \
            (cv_per_topic, w2v_per_topic, c_uci_per_topic, c_npmi_per_topic)
 
 
@@ -231,7 +231,7 @@ def evaluate_topic_quality(topic_words, test_data, taskname=None, calc4each=Fals
     print(f'topic diversity:{topic_diversity}')
     # calculate topic coherence
     dictionary = Dictionary(test_data)
-    (c_v, c_w2v, c_uci, c_npmi, c_mimno),\
+    (c_v, c_w2v, c_uci, c_npmi),\
         (cv_per_topic, c_w2v_per_topic, c_uci_per_topic, c_npmi_per_topic) = \
         calc_topic_coherence(topic_words=topic_words, docs=test_data, dictionary=dictionary,
                              emb_path=None, taskname=taskname, sents4emb=test_data, calc4each=calc4each)
@@ -244,11 +244,11 @@ def evaluate_topic_quality(topic_words, test_data, taskname=None, calc4each=Fals
             for t_idx, (score, twords) in enumerate(zip(scr_per_topic, topic_words)):
                 print(f'topic.{t_idx + 1:>03d}: {score} {twords}')
 
-    print('mimno topic coherence:{}'.format(c_mimno))
+    # print('mimno topic coherence:{}'.format(c_mimno))
     if calc4each:
-        return (c_v, c_w2v, c_uci, c_npmi, c_mimno, topic_diversity), (cv_per_topic, c_w2v_per_topic, c_uci_per_topic, c_npmi_per_topic)
+        return (c_v, c_w2v, c_uci, c_npmi,topic_diversity), (cv_per_topic, c_w2v_per_topic, c_uci_per_topic, c_npmi_per_topic)
     else:
-        return c_v, c_w2v, c_uci, c_npmi, c_mimno, topic_diversity
+        return c_v, c_w2v, c_uci, c_npmi, topic_diversity
 
 
 def smooth_curve(points, factor=0.9):
@@ -261,20 +261,31 @@ def smooth_curve(points, factor=0.9):
             smoothed_points.append(pt)
     return smoothed_points
 
+### set the random seed
+def set_random_seed(seed=1024):
+    torch.backends.cudnn.deterministic = True
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
 #### dataset for a format
 
 import torch
 from torch.utils.data import Dataset
 class DocDataset(Dataset):
-    def __init__(self, vocab, bow, doc_lengths, term_freqs):
+    def __init__(self, vocab, bow, doc_lengths, term_freqs,pseudo_label=None):
         self.vocab = vocab              # 词典，['word1', 'word2', ...]
         self.vocab_size = len(vocab)
         self.bow = bow
         self.doc_lengths = doc_lengths  # 每篇文章的长度
         self.term_freqs = term_freqs    # 每个词的总出现频率
+        self.pseudo_label = pseudo_label
 
     def __getitem__(self, idx):
         bow_vec = torch.tensor(self.bow.toarray()[idx]).float()
+        if self.pseudo_label:
+            pseudo_label = torch.tensor(self.pseudo_label[idx]).float()
+            return (bow_vec,pseudo_label)
         return bow_vec  # tensor[freq_of_word1, freq_of_word2, ...]
 
     def __len__(self):
