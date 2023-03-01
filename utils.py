@@ -111,7 +111,7 @@ def _topic_coordinates(mds, topic_term_dists, topic_proportion, start_index=1):
     mds_df = pd.DataFrame({'x': mds_res[:, 0], 'y': mds_res[:, 1],
                            'topic_id': range(start_index, K + start_index),
                            "topic_name": ["topic_"+str(i) for i in range(start_index, K + start_index)],
-                           'Frequency': topic_proportion * 100
+                           'frequency': topic_proportion * 100
                            }
                           )
     # note: cluster (should?) be deprecated soon. See: https://github.com/cpsievert/LDAvis/issues/26

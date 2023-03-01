@@ -12,7 +12,6 @@ import matplotlib.pyplot as plt
 import sys
 import codecs
 import time
-sys.path.append('..')
 from models.utils.fn import evaluate_topic_quality, smooth_curve
 
 class GSM:
@@ -27,7 +26,17 @@ class GSM:
         if device!=None:
             self.vae = self.vae.to(device)
 
-    def train(self,train_data,vocab,batch_size=256,learning_rate=1e-3,test_data=None,num_epochs=10,is_evaluate=False,log_every=5,beta=1.0,criterion='cross_entropy',ckpt=None):
+    def train(self,
+        train_data,
+        vocab,batch_size=256,
+        learning_rate=1e-3,
+        test_data=None,
+        num_epochs=10,
+        is_evaluate=False,
+        log_every=5,
+        beta=1.0,
+        criterion='cross_entropy',ckpt=None
+    ):
         self.vae.train()
         self.id2token = dict([(idx, word) for idx, word in enumerate(vocab)])
         data_loader = DataLoader(train_data, batch_size = batch_size, shuffle=False, num_workers=4)
@@ -59,7 +68,6 @@ class GSM:
                     rec_loss = F.binary_cross_entropy(torch.softmax(bows_recon,dim=1),bows,reduction='sum')
                 elif criterion=='bce_sigmoid':
                     rec_loss = F.binary_cross_entropy(torch.sigmoid(bows_recon),bows,reduction='sum')
-                
                 kl_div = -0.5 * torch.sum(1+log_vars-mus.pow(2)-log_vars.exp())
                 
                 loss = rec_loss + kl_div * beta
@@ -142,6 +150,16 @@ class GSM:
             if normalize:
                 word_dist = F.softmax(word_dist,dim=1)
             return word_dist.detach().cpu().numpy()
+    def get_doc_topic_dist(self, train_data):
+        self.vae.eval()
+        data_loader = DataLoader(train_data, batch_size=512, shuffle=False, num_workers=4)
+        embed_lst = []
+        for data_batch in data_loader:
+            bows = data_batch
+            embed = self.inference_by_bow(bows)
+            embed_lst.append(embed)
+        embed_lst = np.concatenate(embed_lst, axis=0)
+        return embed_lst
 
     def show_topic_words(self,topic_id=None,topK=5, dictionary=None):
         topic_words = []
@@ -159,6 +177,7 @@ class GSM:
         else:
             topic_words.append([self.id2token[idx] for idx in indices[topic_id]])
         return topic_words
+    
 
     def load_model(self, model):
         self.vae.load_state_dict(model)

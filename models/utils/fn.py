@@ -6,6 +6,35 @@ from utils import create_topic_entity
 from sklearn.metrics.pairwise import cosine_similarity
 
 
+def save_model_result(args,topic_word_dis,topic_words, doc_topic_dis,vocab):
+    N,K = doc_topic_dis.shape
+    K,V = topic_word_dis.shape
+    topic_word_dis = topic_word_dis.transpose()
+
+
+    word_topic_dis = pd.DataFrame(data = topic_word_dis,columns=  ["topic_" + str(i)  for i in range(args.n_components)])
+    word_topic_dis["word_key"] = vocab
+
+    doc_topic_dis = pd.DataFrame(data = doc_topic_dis,columns=  ["topic_" + str(i)  for i in range(args.n_components)])
+    doc_topic_dis["document_id"] = range(N)
+
+    topic_words = ["-".join(topic_words[i]) for i in range(K)]
+    topic_entity = pd.DataFrame(data = topic_words,columns=  ["topic_words"])
+    topic_entity["topic_id"] =  range(K)
+
+    topic_entity.to_csv(f"{args.output_path}model_topic.csv", index=False)
+    word_topic_dis.to_csv(f"{args.output_path}word_topic_dist.csv", index=False)
+    doc_topic_dis.to_csv(f"{args.output_path}doc_topic_dist.csv", index=False)
+
+    
+    
+
+
+
+
+
+
+
 def _get_doc_lengths(dtm):
     return dtm.sum(axis=1).getA1()
 
@@ -75,7 +104,8 @@ def _build_entity(args, topic_word_dis, doc_topic_dis, vocab, doc_lengths, term_
             topic_document_relationship.append({
                 "topic_id": topic_id,
                 "document_id": docu_id,
-                "distribution_value": doc_topic_dis[docu_id][topic_id]
+                "distribution_value": doc_topic_dis[docu_id][topic_id],
+                "relationship_type":1
             }
         )
     topic_document_df = pd.DataFrame(data=topic_document_relationship,

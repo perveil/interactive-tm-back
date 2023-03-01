@@ -11,7 +11,7 @@ warnings.filterwarnings("ignore")
 from models.GSM.GSM_model import GSM
 from models.utils.fn import DocDataset
 import torch
-from models.utils.fn import _get_vocab, _get_doc_lengths, _get_term_freqs, _row_norm, _build_entity,set_random_seed
+from models.utils.fn import _get_vocab, _get_doc_lengths, _get_term_freqs, _row_norm, _build_entity,set_random_seed,save_model_result
 import pandas as pd
 
 
@@ -62,15 +62,19 @@ def run_gsm(args):
         beta = 1.0,
         ckpt = ckpt,
     )
+    ### 获得主题-词汇分布
     topic_word_dist = model.get_topic_word_dist()
     topic_word_dist = _row_norm(topic_word_dist)
     print(len(topic_word_dist), len(topic_word_dist[0]))
-    print(topic_word_dist)
+    ### 获得主题-文档分布
     doc_topic_dist = model.get_doc_topic_dist(doc_dataset)
     doc_topic_dist = _row_norm(doc_topic_dist)
     print(len(doc_topic_dist), len(doc_topic_dist[0]))
-    print(doc_topic_dist)
-    return topic_word_dist, doc_topic_dist, vocab, doc_lengths, term_freqs
+    ### 获得主题中top K 个核心词用来表征主题，topK 为 5
+    topic_words = model.show_topic_words()
+
+
+    return topic_word_dist,topic_words, doc_topic_dist, vocab, doc_lengths, term_freqs,
 
 
 if __name__ == '__main__':
@@ -82,7 +86,7 @@ if __name__ == '__main__':
     # parser.add_argument('--output_path', type=str, default="./dataset/test-100/")
     parser.add_argument('--n_components', type=int, default=5)
     parser.add_argument('--batch_size', type=int, default=64)
-    parser.add_argument('--max_iter', type=int, default=50)
+    parser.add_argument('--max_iter', type=int, default=10)
     parser.add_argument('--lr', type=float, default=1e-4)
     parser.add_argument('--use_gpu', type=bool, default=False)
     parser.add_argument('--ckpt', type=str, default="")
@@ -92,8 +96,9 @@ if __name__ == '__main__':
     ### set a constant radom seed
     set_random_seed()
     ##### start Training 
-    topic_word_dis, doc_topic_dis, vocab, doc_lengths, term_freqs = run_gsm(args)
+    topic_word_dis,topic_words, doc_topic_dis, vocab, doc_lengths, term_freqs = run_gsm(args)
     print("GSM training End")
     ###### 
-    #### _build_entity(args, topic_word_dis, doc_topic_dis, vocab, doc_lengths, term_freqs)
+    ## save_model_result(args,topic_word_dis,topic_words, doc_topic_dis,vocab)
+    _build_entity(args, topic_word_dis, doc_topic_dis, vocab, doc_lengths, term_freqs)
     print("GSM End")

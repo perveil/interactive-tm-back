@@ -120,11 +120,11 @@ def process(args):
     # word2idx = cv.vocabulary_
     # idx2word = dict([(idx, word) for word, idx in cv.vocabulary_.items()])
     # word_entity = pd.DataFrame(data=idx2word.items(), columns=["word_id", "word_key"])
-    word_entity = pd.DataFrame(data={"word_id": range(len(vocab)), "word_key": vocab, "word_frequency": freq})
+    word_entity = pd.DataFrame(data={"word_id": range(len(vocab)), "word_key": vocab, "corpus_frequency": freq})
     word_entity.to_csv(f"{args.output_path}word.csv", index=False)
     #### document 与word 的共现关系
     document_word_occurrence = tf.toarray()
-    document_word_occurrence[document_word_occurrence < 10] = 0
+    document_word_occurrence[document_word_occurrence < 3] = 0
     document_word_relation = []
     for document_idx in range(len(data)):
         for word_idx, occur_num in enumerate(document_word_occurrence[document_idx, :]):

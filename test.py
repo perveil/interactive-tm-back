@@ -1,4 +1,6 @@
-import numpy as np
+from sklearn.datasets import fetch_20newsgroups
 
-x = np.array([[2,1],[1,2]])
-print(x)
+
+docs = fetch_20newsgroups(subset='all',  remove=('headers', 'footers', 'quotes'))['data']
+
+print(docs)
