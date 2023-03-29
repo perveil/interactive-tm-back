@@ -87,7 +87,7 @@ if __name__ == '__main__':
     parser.add_argument('--n_components', type=int, default=5)
     parser.add_argument('--batch_size', type=int, default=64)
     parser.add_argument('--max_iter', type=int, default=10)
-    parser.add_argument('--lr', type=float, default=1e-4)
+    parser.add_argument('--learning_rate', type=float, default=1e-4)
     parser.add_argument('--use_gpu', type=bool, default=False)
     parser.add_argument('--ckpt', type=str, default="")
     parser.add_argument('--log_every', type=int, default=20)
